@@ -23,6 +23,7 @@
     "jsonwebtoken": "^9.0.3",
     "langchain": "^1.5.20",
     "mongoose": "^9.11.3",
+    "morgan": "^1.12.1",
     "nodemailer": "^10.2.1"
   }
 }

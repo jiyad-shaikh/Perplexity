@@ -19,18 +19,21 @@ const Login = () => {
     }))
   }
 
-  const handleSubmit = (event) => {
-    event.preventDefault()
+const handleSubmit = async (event) => {
+    event.preventDefault();
 
     const payload = {
-      email: formData.email,
-      password: formData.password,
-    }
+        email: formData.email,
+        password: formData.password,
+    };
 
-    handleLogin(payload)
-    
-    navigate('/')
-  }
+    try {
+        await handleLogin(payload);
+        navigate('/');
+    } catch (error) {
+        console.error('Login failed:', error);
+    }
+};
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#100E12] px-6 py-12 text-[#E0E0E0]">
