@@ -1,136 +1,210 @@
+
 import 'dotenv/config';
 
-import readline from 'node:readline/promises';
-import { stdin as input, stdout as output } from 'node:process';
-
 import { ChatGoogle } from '@langchain/google/node';
-import { HumanMessage } from 'langchain';
-import { tool, createAgent } from 'langchain';
+
+import {
+    HumanMessage,
+    AIMessage,
+    SystemMessage
+} from 'langchain';
+
+import {
+    tool,
+    createAgent
+} from 'langchain';
+
 import * as z from 'zod';
 
 import { sendEmail } from './mail.services.js';
 
 
-// 1. Create Email Tool
+// ============================================
+// 1. CREATE EMAIL TOOL
+// ============================================
+
 const emailTool = tool(
-  async ({ to, subject, html }) => {
+    async ({ to, subject, html }) => {
 
-    console.log('\nEmail tool called with:', {
-      to,
-      subject,
-      hasHtml: Boolean(html),
-    });
+        console.log('\nEmail tool called with:', {
+            to,
+            subject,
+            hasHtml: Boolean(html),
+        });
 
-    return await sendEmail({
-      to,
-      subject,
-      html,
-    });
-  },
-  {
-    name: 'sendEmail',
+        return await sendEmail({
+            to,
+            subject,
+            html,
+        });
+    },
+    {
+        name: 'sendEmail',
 
-    description: `
-      Send an email to a specified recipient.
+        description: `
+            Send an email to a specified recipient.
 
-      You must provide:
-      - to: Recipient email address.
-      - subject: Email subject.
-      - html: Complete HTML email body.
+            Required fields:
+            - to: Recipient email address.
+            - subject: Email subject.
+            - html: Complete HTML email body.
 
-      If the user asks you to write the email body,
-      generate a professional and meaningful HTML email.
+            If the user explicitly asks you to send an email,
+            generate a professional and meaningful HTML body.
 
-      Never call this tool without a valid recipient email address.
-    `,
+            If the user only asks for an email draft,
+            do not call this tool.
 
-    schema: z.object({
-      to: z.string()
-        .describe('Recipient email address'),
+            Never call this tool without a valid recipient.
+        `,
 
-      subject: z.string()
-        .min(1)
-        .describe('Email subject'),
+        schema: z.object({
+            to: z.string()
+                .email()
+                .describe('Recipient email address'),
 
-      html: z.string()
-        .min(1)
-        .describe('Complete HTML email body'),
-    }),
-  }
+            subject: z.string()
+                .min(1)
+                .describe('Email subject'),
+
+            html: z.string()
+                .min(1)
+                .describe('Complete HTML email body'),
+        }),
+    }
 );
 
 
-// 2. Initialize Gemini Model
-const model = new ChatGoogle({
-  model: 'gemini-3.1-flash-lite',
-  apiKey: process.env.GEMINI_API_KEY,
+// ============================================
+// 2. INITIALIZE GEMINI MODEL
+// ============================================
+
+const geminiModel = new ChatGoogle({
+    model: 'gemini-3.1-flash-lite',
+    apiKey: process.env.GEMINI_API_KEY,
 });
 
 
-// 3. Create AI Agent
+// ============================================
+// 3. CREATE AI AGENT
+// ============================================
+
 const agent = createAgent({
-  model,
-  tools: [emailTool],
+    model: geminiModel,
+    tools: [emailTool],
 });
 
 
-// 4. Initialize Readline
-const rl = readline.createInterface({
-  input,
-  output,
-});
+// ============================================
+// 4. GENERATE AI RESPONSE
+// ============================================
 
+export const generateAIResponse = async (input) => {
 
-// 5. Conversation History
-const messages = [];
+    let conversationMessages = [];
 
+    // Handle a single message
+    if (typeof input === 'string') {
 
-// 6. Run AI Agent
-console.log('\nPerplexity AI Email Assistant Started!');
-console.log('Type "exit" to close the application.\n');
+        conversationMessages.push(
+            new HumanMessage(input)
+        );
 
-while (true) {
-  try {
-    const userInput = await rl.question(
-      '\x1b[32mYou:\x1b[0m '
-    );
-
-    if (!userInput.trim()) {
-      continue;
     }
 
-    if (userInput.toLowerCase().trim() === 'exit') {
-      console.log('Goodbye!');
-      break;
-    }
+    // Handle conversation history
+    else if (Array.isArray(input)) {
 
-    // Add user message to conversation history
-    messages.push(new HumanMessage(userInput));
+        conversationMessages = input.map((msg) => {
+
+            switch (msg.role) {
+
+                case 'user':
+                    return new HumanMessage(msg.content);
+
+                case 'ai':
+                    return new AIMessage(msg.content);
+
+                case 'system':
+                    return new SystemMessage(msg.content);
+
+                default:
+                    throw new Error(
+                        `Unsupported message role: ${msg.role}`
+                    );
+            }
+        });
+
+    } else {
+        throw new Error(
+            'Input must be a string or an array of messages'
+        );
+    }
 
     // Invoke AI agent
     const response = await agent.invoke({
-      messages,
+        messages: conversationMessages
     });
 
-    // Update conversation history with the complete response
-    messages.splice(0, messages.length, ...response.messages);
-
-    // Get final AI response
+    // Get final AI message
     const lastMessage = response.messages[
-      response.messages.length - 1
+        response.messages.length - 1
     ];
 
-    console.log(
-      `\n\x1b[34m[AI]\x1b[0m`,
-      typeof lastMessage.content === 'string'
-        ? lastMessage.content
-        : JSON.stringify(lastMessage.content, null, 2)
-    );
+    if (!lastMessage) {
+        throw new Error('AI agent returned no response');
+    }
 
-  } catch (error) {
-    console.error('\n\x1b[31mError:\x1b[0m', error.message);
-  }
-}
+    // Extract response content
+    const content = lastMessage.content;
 
-// Close readline interface
-rl.close();
+    if (typeof content === 'string') {
+        return content;
+    }
+
+    // Handle multimodal / block-based content
+    if (Array.isArray(content)) {
+        return content
+            .filter(block => block.type === 'text')
+            .map(block => block.text)
+            .join('\n');
+    }
+
+    throw new Error('Invalid AI response format');
+};
+
+
+// ============================================
+// 5. GENERATE CHAT TITLE
+// ============================================
+
+export const generateChatTitle = async (message) => {
+
+    const response = await geminiModel.invoke([
+
+        new SystemMessage(`
+            You are a helpful assistant that generates concise
+            and relevant titles for chat conversations.
+
+            Generate a title based on the user's first message.
+
+            Rules:
+            - Keep the title short and meaningful.
+            - Maximum 8 words.
+            - Do not include quotation marks.
+            - Do not include explanations.
+            - Do not use offensive or vulgar language.
+        `),
+
+        new HumanMessage(
+            `Generate a concise title for this message: ${message}`
+        ),
+
+    ]);
+
+    const title = response.content;
+
+    return typeof title === 'string'
+        ? title.trim().replace(/^["']|["']$/g, '')
+        : 'New chat';
+};
