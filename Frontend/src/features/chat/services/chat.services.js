@@ -14,9 +14,9 @@ export async function sendMessage(message) {
     }
 }
 
-export async function getAllChats() {
+export async function getAllChats(isArchived = false) {
     try {
-        const response = await api.get('/')
+        const response = await api.get('/', { params: { isArchived } })
         return response.data
     } catch (error) {
         throw error.response.data
@@ -52,7 +52,7 @@ export async function deleteChat(chatId) {
 
 export async function archiveChat(chatId, archive) {
     try {
-        const response = await api.patch(`/${chatId}/archive`, { archive })
+        const response = await api.patch(`/${chatId}/archive`, { isArchived: archive })
         return response.data
     } catch (error) {
         throw error.response.data

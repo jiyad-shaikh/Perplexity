@@ -1,12 +1,13 @@
-import { io } from "socket.io-client";
+import { io } from 'socket.io-client'
+
+let socket
 
 export const initializeSocket = () => {
-  const socket = io("http://localhost:3000", {
-    withCredentials: true,
-  });
-    
-  socket.on("connect", () => {
-    console.log("Connected to socket.IO server");
-  });
+    if (!socket) socket = io('http://localhost:3000', { withCredentials: true })
+    return socket
+}
 
-};
+export const disconnectSocket = () => {
+    socket?.disconnect()
+    socket = undefined
+}

@@ -17,6 +17,7 @@ import {
 import * as z from 'zod';
 
 import { sendEmail } from './mail.services.js';
+import { searchInternet } from './internet.services.js';
 
 
 // ============================================
@@ -75,6 +76,40 @@ const emailTool = tool(
 );
 
 
+const internetSearchTool = tool(
+    async ({ query }) => {
+        console.log("\nInternet search tool called:", query);
+
+        const results = await searchInternet(query);
+
+        return JSON.stringify(results);
+    },
+    {
+        name: "searchInternet",
+
+        description: `
+            Search the internet for relevant and up-to-date information.
+
+            Use this tool when:
+            - The user asks for current information.
+            - The user asks about recent events or news.
+            - The user asks for live information such as AQI,
+              weather, stock prices, or current updates.
+            - The answer requires information from the internet.
+
+            Always provide the user's search query.
+        `,
+
+        schema: z.object({
+            query: z.string()
+                .min(1)
+                .describe("Search query to look up on the internet."),
+        }),
+    }
+);
+
+
+
 // ============================================
 // 2. INITIALIZE GEMINI MODEL
 // ============================================
@@ -91,7 +126,7 @@ const geminiModel = new ChatGoogle({
 
 const agent = createAgent({
     model: geminiModel,
-    tools: [emailTool],
+    tools: [emailTool, internetSearchTool],
 });
 
 
