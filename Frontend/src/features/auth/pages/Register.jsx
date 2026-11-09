@@ -23,13 +23,13 @@ const Register = () => {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#100E12] px-6 py-12 text-[#E0E0E0]">
+    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_right,_rgba(8,145,178,0.22),_transparent_38%),radial-gradient(circle_at_bottom_left,_rgba(30,64,175,0.2),_transparent_42%),linear-gradient(135deg,_#020708_0%,_#06181b_52%,_#071329_100%)] px-4 py-8 text-[#E0E0E0] sm:px-6 sm:py-12">
       <section className="w-full max-w-md">
         <Link to="/" className="mb-12 block text-center text-2xl font-semibold tracking-[-0.04em] text-[#E0E0E0]">
           perplexity
         </Link>
 
-        <div className="rounded-2xl border border-[#353838] bg-[#1F2121] p-8 shadow-[0_12px_40px_rgba(0,0,0,0.28)] sm:p-10">
+        <div className="rounded-2xl border border-cyan-700/40 bg-black/30 p-6 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl sm:p-10">
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-semibold tracking-[-0.03em]">Create your account</h1>
             <p className="mt-2 text-sm text-[#a6aaaa]">Start exploring better answers.</p>
