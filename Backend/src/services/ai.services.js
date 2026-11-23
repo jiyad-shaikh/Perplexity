@@ -20,6 +20,55 @@ import { sendEmail } from './mail.services.js';
 import { searchInternet } from './internet.services.js';
 
 
+export class AIServiceError extends Error {
+
+    constructor(message, options = {}) {
+        super(message);
+        this.name = 'AIServiceError';
+        this.code = options.code || 'AI_SERVICE_ERROR';
+        this.statusCode = options.statusCode || 502;
+        this.cause = options.cause;
+    }
+}
+
+
+const getAIProviderError = (error) => {
+
+    const statusCode = error?.status || error?.statusCode;
+
+    if (statusCode === 401 || statusCode === 403) {
+        return new AIServiceError(
+            'The AI service rejected the request. Check the server API configuration.',
+            {
+                code: 'AI_AUTHENTICATION_FAILED',
+                statusCode: 502,
+                cause: error,
+            }
+        );
+    }
+
+    if (statusCode === 429) {
+        return new AIServiceError(
+            'The AI service is temporarily rate-limited. Please try again later.',
+            {
+                code: 'AI_RATE_LIMITED',
+                statusCode: 429,
+                cause: error,
+            }
+        );
+    }
+
+    return new AIServiceError(
+        'The AI service is temporarily unavailable. Please try again later.',
+        {
+            code: 'AI_SERVICE_UNAVAILABLE',
+            statusCode: 502,
+            cause: error,
+        }
+    );
+};
+
+
 // ============================================
 // 1. CREATE EMAIL TOOL
 // ============================================
@@ -177,9 +226,15 @@ export const generateAIResponse = async (input) => {
     }
 
     // Invoke AI agent
-    const response = await agent.invoke({
-        messages: conversationMessages
-    });
+    let response;
+
+    try {
+        response = await agent.invoke({
+            messages: conversationMessages
+        });
+    } catch (error) {
+        throw getAIProviderError(error);
+    }
 
     // Get final AI message
     const lastMessage = response.messages[

@@ -7,7 +7,8 @@ import Source from '../models/source.model.js';
 
 import {
     generateAIResponse,
-    generateChatTitle
+    generateChatTitle,
+    AIServiceError
 } from '../services/ai.services.js';
 
 
@@ -215,9 +216,12 @@ export const sendMessage = async (req, res) => {
 
         console.error('Send Message Error:', error);
 
-        return res.status(500).json({
+        const busy = [429, 503].includes(error?.statusCode);
+        return res.status(busy ? 503 : 500).json({
             success: false,
-            message: 'Failed to send message'
+            message: busy
+                ? 'The AI is busy right now. Please try again in a moment.'
+                : 'Failed to send message'
         });
     }
 };
