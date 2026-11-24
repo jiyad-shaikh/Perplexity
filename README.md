@@ -23,17 +23,14 @@ The application currently includes:
 
 ## Screenshots
 
-Add captured images to `docs/screenshots/` and replace the placeholders below with the final images.
+>### Chat Dashboard
+![Chat Dashboard](docs/screenshots/dashboard.png)
 
-> **Screenshot placeholder — Chat dashboard**
-> Add the final image at `docs/screenshots/dashboard.png`.
+### Authentication
+![Authentication Screen](docs/screenshots/authentication.png)
 
-
-> **Screenshot placeholder — Authentication screen**
-> Add the final image at `docs/screenshots/authentication.png`.
-
-> **Screenshot placeholder — Conversation with assistant response**
-> Add the final image at `docs/screenshots/conversation.png`.
+### AI Conversation
+![Conversation with AI Assistant](docs/screenshots/conversation.png)
 
 ## Features
 
